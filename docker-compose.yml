@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  rag-app:
+    build: .
+    container_name: rag-assistant
+    network_mode: "host"
+    environment:
+      - OLLAMA_HOST=http://localhost:11434
+    volumes:
+      - ./data:/app/data
+      - ./templates:/app/templates

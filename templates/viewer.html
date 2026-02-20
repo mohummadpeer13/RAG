@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Viewer RAG - Exploration</title>
+
+    <!-- Prism.js pour coloration syntaxique -->
+    <!-- Avant (VS Code Dark+) -->
+    <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-vsc-dark-plus.min.css" rel="stylesheet" /> -->
+
+    <!-- Après (retour à okaidia, plus coloré et moins agressif) -->
+    <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet" /> -->
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-vs.min.css" rel="stylesheet" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-annotation.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+        h1, h2 { color: #1a3c5e; }
+        .section { margin: 25px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; }
+        ul { list-style: none; padding-left: 0; }
+        li { margin: 10px 0; padding: 8px; background: #f0f8ff; border-radius: 4px; cursor: pointer; }
+        li:hover { background: #e6f3ff; }
+        #fileDetail { 
+            margin-top: 30px; 
+            padding: 20px; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            background: #fff; 
+            display: none; 
+        }
+        .chunk { margin: 20px 0; border-left: 5px solid #3498db; padding-left: 15px; }
+        button {
+            padding: 8px 16px;
+            margin: 10px 5px;
+            background: #2c7be5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background: #1f5bb5; }
+        a.back { display: inline-block; margin: 10px 0; color: #2c7be5; text-decoration: none; }
+        a.back:hover { text-decoration: underline; }
+        #backToTop {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #2c7be5;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        #backToTop:hover { background: #1f5bb5; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="py-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">
+                    Exploration du <span class="text-indigo-600">RAG</span>
+                </h1>
+                <p class="text-slate-500 mt-1 italic text-sm font-mono">Index : {{ summary.persist_dir }}</p>
+            </div>
+            
+           <a href="/" class="shrink-0">
+                <button class="group relative inline-flex items-center justify-center gap-3 bg-indigo-600 hover:bg-violet-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-indigo-200 active:scale-95 overflow-hidden border-b-4 border-indigo-800">
+                    
+                    <div class="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-[-25deg] -translate-x-full group-hover:translate-x-[250%] transition-transform duration-700 ease-in-out"></div>
+                    
+                    <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+
+                    <span>Retour à l'accueil</span>
+                </button>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <div class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-[6px] border-l-indigo-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-black text-slate-400 uppercase tracking-widest">Segments indexés</p>
+                        <h3 class="text-4xl font-black text-indigo-600 mt-1">{{ summary.total_chunks }}</h3>
+                        <p class="text-xs text-slate-500 mt-1 font-medium italic">Fragments de texte vectorisés</p>
+                    </div>
+                    <div class="text-5xl opacity-20 grayscale">🧩</div>
+                </div>
+                <div class="absolute -bottom-2 -right-2 w-24 h-24 bg-indigo-50 rounded-full opacity-50 blur-2xl"></div>
+            </div>
+
+            <div class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 border-l-[6px] border-l-emerald-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-black text-slate-400 uppercase tracking-widest">Fichiers analysés</p>
+                        <h3 class="text-4xl font-black text-emerald-600 mt-1">{{ summary.total_files }}</h3>
+                        <p class="text-xs text-slate-500 mt-1 font-medium italic">Documents sources uniques</p>
+                    </div>
+                    <div class="text-5xl opacity-20 grayscale">📁</div>
+                </div>
+                <div class="absolute -bottom-2 -right-2 w-24 h-24 bg-emerald-50 rounded-full opacity-50 blur-2xl"></div>
+            </div>
+        </div>
+
+       <div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden border-l-[6px] border-l-indigo-500">
+            <div class="p-8 bg-indigo-50/40">
+                <h2 class="text-xl font-bold text-indigo-900 flex items-center gap-3 mb-6">
+                    <span class="text-2xl">📁</span> Liste des fichiers indexés
+                </h2>
+                
+                <ul id="fileList" class="grid grid-cols-1 gap-2">
+                    {% for file in summary.files %}
+                        <li onclick="showFileChunks('{{ file | e }}')" 
+                            class="group flex justify-between items-center p-3 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl cursor-pointer transition-all shadow-sm">
+                            
+                            <div class="flex items-center gap-4 overflow-hidden">
+                                <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 font-mono text-xs font-bold rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                    {{ loop.index }}
+                                </span>
+
+                                <span class="text-slate-600 font-mono text-xs truncate group-hover:text-indigo-700">
+                                    {{ file }}
+                                </span>
+                            </div>
+
+                            <span class="chunk-badge shrink-0 bg-indigo-100 text-indigo-600 text-[10px] font-black px-2.5 py-1 rounded-lg border border-indigo-200 uppercase tracking-tighter" 
+                                data-file="{{ file | e }}">
+                                ... chunks
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div id="fileDetail" class="section">
+            <h2 id="fileTitle"></h2>
+            <div id="chunksContainer"></div>
+            <button id="showFullFileBtn" style="display:none;" onclick="showFullFile()">Voir tout le fichier</button>
+        </div>
+    </div>
+
+    <!-- Bouton Retour en haut -->
+    <button id="backToTop" title="Retour en haut">↑</button>
+
+    <script>
+        let currentFilePath = '';
+        let fullChunksData = null;
+
+        async function showFileChunks(filePath) {
+            currentFilePath = filePath;
+
+            const detailDiv = document.getElementById('fileDetail');
+            const title = document.getElementById('fileTitle');
+            const container = document.getElementById('chunksContainer');
+            const fullBtn = document.getElementById('showFullFileBtn');
+
+            title.textContent = `Fichier : ${filePath}`;
+            container.innerHTML = '<p>Chargement des chunks...</p>';
+            detailDiv.style.display = 'block';
+            fullBtn.style.display = 'none';
+
+            // Scroll fluide vers le bloc
+            detailDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            try {
+                const response = await fetch(`/file-chunks?path=${encodeURIComponent(filePath)}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    container.innerHTML = `<p style="color:red">Erreur : ${data.error}</p>`;
+                    return;
+                }
+
+                if (data.chunks.length === 0) {
+                    container.innerHTML = '<p>Aucun chunk trouvé pour ce fichier.</p>';
+                    return;
+                }
+
+                container.innerHTML = `<p><strong>${data.chunks.length} chunks trouvés</strong></p>`;
+
+            // On supprime le .slice(0, 8) pour tout afficher
+            data.chunks.forEach((chunk, index) => {
+                const div = document.createElement('div');
+                div.className = 'chunk';
+                div.innerHTML = `
+                    <strong>Chunk ${index + 1} (${chunk.length} caractères)</strong><br>
+                    <pre><code class="language-java">${chunk.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+                `;
+                container.appendChild(div);
+            });
+
+            // Le bouton "Voir tout" n'est plus utile si on affiche déjà tout, 
+            // mais on peut le garder pour une vue concaténée sans les labels "Chunk 1", "Chunk 2"...
+            if (data.chunks.length > 0) {
+                fullBtn.style.display = 'inline-block';
+                fullBtn.textContent = `Voir en un seul bloc (${data.chunks.length} chunks)`;
+            }
+
+                // Colorie le code après insertion
+                Prism.highlightAll();
+            } catch (err) {
+                container.innerHTML = `<p style="color:red">Erreur réseau : ${err.message}</p>`;
+            }
+        }
+
+        async function updateChunkCounts() {
+            const badges = document.querySelectorAll('.chunk-badge');
+            
+            badges.forEach(async (badge) => {
+                const filePath = badge.getAttribute('data-file');
+                try {
+                    const response = await fetch(`/file-chunks?path=${encodeURIComponent(filePath)}`);
+                    const data = await response.json();
+                    if (data.chunks) {
+                        badge.textContent = `${data.chunks.length} chunks`;
+                        // Si c'est un gros fichier, on change la couleur en orange
+                        if(data.chunks.length > 10) {
+                            badge.classList.replace('bg-indigo-100', 'bg-orange-100');
+                            badge.classList.replace('text-indigo-600', 'text-orange-600');
+                        }
+                    }
+                } catch (err) {
+                    badge.textContent = "err";
+                }
+            });
+        }
+
+        // Lancer la mise à jour des badges au chargement
+        document.addEventListener('DOMContentLoaded', updateChunkCounts);
+
+        // Bouton Retour en haut
+        const backToTopBtn = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            backToTopBtn.style.display = window.scrollY > 300 ? 'block' : 'none';
+        });
+
+        backToTopBtn.onclick = () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+    </script>
+</body>
+</html>

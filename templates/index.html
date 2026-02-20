@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Spring Boot - Assistant Local</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen pb-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="py-10 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 mb-4">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Local Engine Active</span>
+            </div>
+
+            <h1 class="text-5xl font-extrabold tracking-tight text-slate-900 mb-4">
+                RAG <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Assistant</span>
+            </h1>
+            
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                Interrogez votre codebase localement avec une précision chirurgicale. <br>
+                Boosté par <span class="font-semibold text-slate-800">Ollama</span> et <span class="font-semibold text-slate-800">ChromaDB</span>.
+            </p>
+        </div>
+
+
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden border-l-[6px] border-l-emerald-500">
+            <div class="p-6 bg-emerald-50/40">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-emerald-900 flex items-center gap-2">
+                            <span class="text-2xl">📊</span> Statistiques de la Base RAG
+                        </h2>
+                        <p class="text-sm text-emerald-700 mt-1">Analyse en temps réel de votre indexation vectorielle.</p>
+                    </div>
+                    
+                    <button onclick="loadDashboard()" 
+                            class="group flex items-center gap-2 bg-white border border-emerald-200 text-emerald-700 px-4 py-2 rounded-xl font-bold hover:bg-emerald-50 hover:border-emerald-300 transition-all shadow-sm active:scale-95">
+                        <span class="group-hover:rotate-180 transition-transform duration-500">🔄</span>
+                        Actualiser
+                    </button>
+                </div>
+
+                <div id="dashboard">
+                    <p class="text-emerald-600 animate-pulse">Initialisation du tableau de bord...</p>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden border-l-[6px] border-l-amber-500">
+            <div class="p-8 bg-amber-50/40">
+                <h2 class="text-xl font-bold text-amber-900 flex items-center gap-3 mb-6">
+                    <span class="text-2xl">🔍</span> Poser une question
+                </h2>
+                
+                <form id="queryForm" class="flex flex-col md:flex-row gap-3" onsubmit="event.preventDefault(); sendQuery();">
+                    <div class="relative flex-1">
+                        <input type="text" id="question" 
+                            class="w-full px-5 py-4 bg-white rounded-xl border border-amber-200 focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-slate-700 shadow-sm placeholder:text-slate-400" 
+                            placeholder="ex: Récupère le contenu du fichier EmailService.java et explique ce que fait la méthode annotée @Async" 
+                            required>
+                    </div>
+                    
+                    <button type="button" onclick="sendQuery()" 
+                        class="group relative inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg shadow-orange-200 active:scale-95 overflow-hidden border-b-4 border-orange-700">
+                        
+                        <div class="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-[-25deg] -translate-x-full group-hover:translate-x-[250%] transition-transform duration-700 ease-in-out"></div>
+                        
+                        <span>Interroger</span>
+                        
+                        <svg class="w-5 h-5 group-hover:scale-110 group-hover:drop-shadow-[0_0_5px_rgba(255,255,255,0.8)] transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </button>
+                </form>
+
+                <div id="response" class="mt-6 min-h-[50px] transition-all duration-300"></div>
+            </div>
+        </div>
+
+       <div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden border-l-[6px] border-l-lime-400">
+            <div class="p-8 bg-lime-50/30 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex-1">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3 mb-2">
+                        <span class="text-2xl">📁</span> Explorer le RAG
+                    </h2>
+                    <p class="text-slate-600 leading-relaxed">
+                        Accédez à l'interface de visualisation pour inspecter vos fichiers indexés, voir le découpage en <span class="font-semibold text-lime-700">chunks</span> et vérifier la qualité de vos données.
+                    </p>
+                </div>
+                
+                <a href="/viewer" class="shrink-0">
+                    <button class="group relative inline-flex items-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg shadow-emerald-200 active:scale-95 overflow-hidden border-b-4 border-emerald-800">
+                        
+                        <div class="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-[-25deg] -translate-x-full group-hover:translate-x-[250%] transition-transform duration-700 ease-in-out"></div>
+                        
+                        <span>Voir le viewer complet</span>
+                        
+                        <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </button>
+                </a>
+            </div>
+        </div>
+        
+
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden border-l-[6px] border-l-blue-600">
+            <div class="p-8 bg-blue-50/40">
+                <h2 class="text-xl font-bold text-blue-900 flex items-center gap-3 mb-2">
+                    <span class="text-2xl">⚙️</span> Intelligence du RAG
+                </h2>
+                <p class="text-blue-800/80 leading-relaxed mb-6">
+                    Synchronisez la base de connaissances avec vos fichiers sources. 
+                    Cette action analyse vos documents pour mettre à jour les réponses de l'assistant.
+                </p>
+                
+                <div class="flex flex-wrap items-center gap-4 mb-6">
+                    <button id="runIndexBtn" class="group relative inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg shadow-blue-200 active:scale-95 overflow-hidden border-b-4 border-blue-800">
+                        
+                        <div class="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-[-25deg] -translate-x-full group-hover:translate-x-[250%] transition-transform duration-700 ease-in-out"></div>
+                        
+                        <span>Mettre à jour l'index RAG</span>
+                        
+                        <svg class="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                    
+                    <span id="timerDisplay" class="hidden px-4 py-2 bg-white border border-blue-100 rounded-lg text-slate-600 font-mono text-sm shadow-sm items-center gap-2">
+                        <span class="animate-pulse">⏱️</span> Temps écoulé : 0m 00s
+                    </span>
+                </div>
+
+                <div id="progressContainer" class="hidden w-full bg-slate-200 h-3 rounded-full overflow-hidden mb-4 shadow-inner">
+                    <div id="progressBar" class="w-0 bg-blue-500 h-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                </div>
+                
+                <div id="indexResult" class="text-sm font-medium leading-relaxed"></div>
+            </div>
+        </div>
+
+        
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden border-l-[6px] border-l-red-600">
+            <div class="p-8 bg-red-50/40">
+                <h2 class="text-xl font-bold text-red-900 flex items-center gap-3 mb-2">
+                    <span class="text-2xl">⚠️</span> Zone de danger
+                </h2>
+                <p class="text-red-800/80 leading-relaxed mb-6">
+                    Supprimez l'intégralité de la base de données vectorielle. 
+                    Cette action est <span class="font-bold underline">irréversible</span> et rendra l'assistant amnésique jusqu'à la prochaine synchronisation.
+                </p>
+                
+                <div class="flex flex-wrap items-center gap-4 mb-6">
+                    <button id="clearRagBtn" class="group relative inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-xl transition-all shadow-lg shadow-red-200 active:scale-95 overflow-hidden border-b-4 border-red-800">
+                        
+                        <div class="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-[-25deg] -translate-x-full group-hover:translate-x-[250%] transition-transform duration-700 ease-in-out"></div>
+                        
+                        <span>Vider la base RAG</span>
+                        
+                        <svg class="w-5 h-5 group-hover:animate-bounce transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                    
+                    <span id="clearStatus" class="hidden px-4 py-2 bg-white border border-red-100 rounded-lg text-red-600 font-bold text-sm shadow-sm items-center gap-2 animate-pulse">
+                        🗑️ Suppression en cours...
+                    </span>
+                </div>
+
+                <div id="clearProgressContainer" class="hidden w-full bg-slate-200 h-3 rounded-full overflow-hidden mb-4 shadow-inner">
+                    <div id="clearProgressBar" class="w-0 bg-red-500 h-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                </div>
+                
+                <p id="clearResult" class="text-sm font-bold"></p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    // Chargement automatique au démarrage de la page
+    document.addEventListener("DOMContentLoaded", loadDashboard);
+    
+    const questionInput = document.getElementById("question");
+
+    async function sendQuery() {
+        const q = questionInput.value.trim();
+        if (!q) return;
+
+        const responseDiv = document.getElementById("response");
+        
+        // UI Feedback : On affiche un loader stylé pendant l'attente
+        responseDiv.innerHTML = `
+            <div class="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl text-amber-700 animate-pulse">
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600"></div>
+                <span class="font-medium">L'IA analyse votre codebase...</span>
+            </div>
+        `;
+
+        try {
+            const res = await fetch("/query", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question: q })
+            });
+            const data = await res.json();
+
+            // Affichage de la réponse avec le style "Code Dark"
+            responseDiv.innerHTML = `
+                <div class="bg-slate-900 rounded-xl p-6 shadow-inner border border-slate-800 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-2">
+                        <div class="text-xs font-mono text-amber-400 uppercase tracking-widest font-bold flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            Réponse de l'assistant
+                        </div>
+                        <button onclick="this.parentElement.parentElement.remove()" class="text-slate-500 hover:text-white text-xs">Fermer</button>
+                    </div>
+                    <div class="text-slate-200 whitespace-pre-wrap font-mono text-sm leading-relaxed overflow-x-auto">
+                        ${data.answer.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            responseDiv.innerHTML = `
+                <div class="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 font-bold flex items-center gap-2">
+                    <span>❌</span> Erreur : ${err.message}
+                </div>
+            `;
+        }
+    }
+
+
+    async function loadDashboard() {
+        const dashboardDiv = document.getElementById('dashboard');
+        if (!dashboardDiv) return;
+
+        dashboardDiv.innerHTML = '<p style="color: #666;">🔄 Chargement des statistiques...</p>';
+
+        try {
+            const res = await fetch('/stats');
+            const data = await res.json();
+
+            if (data.error) {
+                dashboardDiv.innerHTML = `<p style="color:red">⚠️ Erreur : ${data.error}</p>`;
+                return;
+            }
+
+            // Configuration des 10 statistiques demandées
+            const statsConfig = [
+                { label: "Total Chunks", value: data.total_chunks, icon: "🧩", color: "#4f46e5" },
+                { label: "Taille Moyenne", value: (data.average_chunk_size || 0) + " car.", icon: "📏", color: "#d97706" },
+                { label: "Total Fichiers", value: data.total_files, icon: "📁", color: "#0891b2" },
+                { label: "Unique Packages", value: data.unique_packages || 0, icon: "📦", color: "#059669" },
+                { label: "Embedding Model", value: data.embedding_model, icon: "🧠", color: "#2563eb" },
+                { label: "LLM Model", value: data.llm_model, icon: "🤖", color: "#7c3aed" },
+                { label: "Persist Dir", value: data.persist_dir ? data.persist_dir.replace('./', '') : "-", icon: "🗄️", color: "#64748b" },
+                { label: "Chunk Size", value: data.chunk_size, icon: "✂️", color: "#0ea5e9" },
+                { label: "Chunk Overlap", value: data.chunk_overlap, icon: "🔗", color: "#ec4899" },
+                { label: "Retriever K", value: data.retriever_k, icon: "🔍", color: "#ef4444" }
+            ];
+
+            // Remplace la partie container.innerHTML de ta fonction par celle-ci :
+            dashboardDiv.innerHTML = `
+                <style>
+                    .stats-grid {
+                        display: grid;
+                        gap: 12px;
+                        margin-top: 5px;
+                        /* 5 colonnes sur PC, 2 sur tablette, 1 sur mobile */
+                        grid-template-columns: repeat(5, 1fr);
+                    }
+                    @media (max-width: 1000px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+                    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+                    
+                    .stat-card {
+                        background: #f8fafc;
+                        padding: 8px;
+                        border-radius: 8px;
+                        border: 1px solid #e2e8f0;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        min-height: 60px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                    }
+                </style>
+                <div class="stats-grid">
+                    ${statsConfig.map(s => `
+                        <div class="stat-card">
+                            <span style="font-size: 0.72em; color: #64748b; font-weight: bold; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${s.icon} ${s.label}
+                            </span>
+                            <span style="font-size: 0.85em; padding-top: 10px; color: ${s.color}; font-family: 'Consolas', monospace; font-weight: bold; word-break: break-all;">
+                                ${s.value || '0'}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } catch (err) {
+            dashboardDiv.innerHTML = `<p style="color:red">❌ Erreur réseau : ${err.message}</p>`;
+        }
+    }
+
+
+    document.getElementById('clearRagBtn').onclick = async function() {
+        if (!confirm("⚠️ Voulez-vous vraiment supprimer TOUS les dossiers d'indexation ?")) return;
+
+        const btn = this;
+        const resultP = document.getElementById('clearResult');
+        const statusSpan = document.getElementById('clearStatus'); // Si tu as mis le span de l'étape précédente
+        const progressBar = document.getElementById('clearProgressBar');
+
+        // UI Feedback
+        btn.disabled = true;
+        resultP.style.color = "orange";
+        resultP.textContent = "Nettoyage du disque en cours...";
+        if(statusSpan) statusSpan.style.display = "inline";
+
+        try {
+            const res = await fetch('/clear-rag', { method: 'POST' });
+            const data = await res.json();
+
+            if (data.status === "success") {
+                resultP.style.color = "green";
+                resultP.innerHTML = "✅ " + data.message;
+                if(progressBar) progressBar.style.width = "100%";
+                
+                // On recharge le dashboard pour afficher "0 chunks"
+                if (typeof loadDashboard === "function") loadDashboard(); 
+            } else {
+                resultP.style.color = "red";
+                resultP.textContent = "Erreur : " + data.message;
+            }
+        } catch (err) {
+            resultP.style.color = "red";
+            resultP.textContent = "Erreur réseau : " + err.message;
+        } finally {
+            setTimeout(() => {
+                btn.disabled = false;
+                if(statusSpan) statusSpan.style.display = "none";
+            }, 1500);
+        }
+    };
+
+
+    document.getElementById('runIndexBtn').onclick = async function() {
+        if (!confirm("Lancer l'indexation ? Cela peut prendre plusieurs minutes.")) return;
+
+        const resultP = document.getElementById('indexResult');
+        resultP.style.color = "orange";
+        
+        // --- Initialisation du Timer ---
+        let seconds = 0;
+        const timerInterval = setInterval(() => {
+            seconds++;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            const timeStr = `${mins}m ${secs.toString().padStart(2, '0')}s`;
+            resultP.innerHTML = `⏳ Indexation en cours... (Temps écoulé : ${timeStr})<br><div id='debugSteps' style='font-size:0.9em; color:gray;'></div>`;
+        }, 1000);
+
+        try {
+            const res = await fetch('/run-index', { method: 'POST' });
+            const data = await res.json();
+            
+            // On arrête le timer dès qu'on a la réponse
+            clearInterval(timerInterval);
+
+            let debugHtml = "";
+            if (data.debug && Array.isArray(data.debug)) {
+                debugHtml = "<ul style='text-align:left; display:inline-block;'>" + 
+                            data.debug.map(step => `<li>${step}</li>`).join('') + 
+                            "</ul>";
+            }
+
+            if (data.status === "success") {
+                const finalMins = Math.floor(seconds / 60);
+                const finalSecs = seconds % 60;
+                resultP.style.color = "green";
+                resultP.innerHTML = `✅ ${data.message} (${data.count || 0} chunks) en ${finalMins}m ${finalSecs}s<br>${debugHtml}`;
+                if (typeof loadDashboard === "function") loadDashboard(); 
+            } else {
+                resultP.style.color = "red";
+                resultP.innerHTML = `❌ Erreur : ${data.message || "Erreur inconnue"}<br>${debugHtml}`;
+            }
+        } catch (err) {
+            clearInterval(timerInterval);
+            console.error(err);
+            resultP.style.color = "red";
+            resultP.textContent = "Erreur réseau ou serveur : " + err.message;
+        }
+    };
+
+</script>
+</body>
+</html>
